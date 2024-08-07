@@ -1,17 +1,6 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-
-User = get_user_model()
-
-
-class Name(models.Model):
-    name = models.TextField(max_length=256)
-
-    class Meta:
-        abstract = True
-
-    def __str__(self):
-        return self.name
 
 
 class Main(Name):
@@ -66,3 +55,39 @@ class GenreTitle(models.Model):
 
     def __str__(self):
         return f'Жанр произведения {self.title} - {self.genre}.'
+
+
+class Review(models.Model):
+    title = models.ForeignKey(Title, on_delete=models.CASCADE,
+                              related_name='reviews')
+    text = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
+                               related_name='reviews')
+    score = models.PositiveIntegerField(validators=[MinValueValidator(1),
+                                                    MaxValueValidator(10)])
+    pub_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'author'],
+                name='unique_title_author'
+            )
+        ]
+
+    def __str__(self):
+        return self.text[:20]
+
+
+class Comment(models.Model):
+    text = models.TextField()
+    review = models.ForeignKey(Review, on_delete=models.CASCADE,
+                               related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
+                               related_name='comments')
+    pub_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.text[:20]
+
+ 
