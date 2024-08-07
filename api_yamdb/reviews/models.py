@@ -5,7 +5,14 @@ from django.db import models
 from users.models import YamdbUser
 
 
-class Main(models.Model):
+class Name(models.Model):
+    name = models.CharField(max_length=256)
+
+    class Meta:
+        abstract = True
+
+
+class Main(Name):
     slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
