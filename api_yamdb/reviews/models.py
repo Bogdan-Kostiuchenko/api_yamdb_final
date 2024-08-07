@@ -2,8 +2,10 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
+from users.models import YamdbUser
 
-class Main(Name):
+
+class Main(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
@@ -17,14 +19,14 @@ class Category(Main):
         verbose_name_plural = 'Категории'
 
 
-class Genre(Main):
+class Genre(models.Model):
 
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
 
 
-class Title(Name):
+class Title(models.Model):
     year = models.IntegerField()
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(
@@ -61,7 +63,7 @@ class Review(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE,
                               related_name='reviews')
     text = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE,
+    author = models.ForeignKey(YamdbUser, on_delete=models.CASCADE,
                                related_name='reviews')
     score = models.PositiveIntegerField(validators=[MinValueValidator(1),
                                                     MaxValueValidator(10)])
@@ -83,11 +85,9 @@ class Comment(models.Model):
     text = models.TextField()
     review = models.ForeignKey(Review, on_delete=models.CASCADE,
                                related_name='comments')
-    author = models.ForeignKey(User, on_delete=models.CASCADE,
+    author = models.ForeignKey(YamdbUser, on_delete=models.CASCADE,
                                related_name='comments')
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.text[:20]
-
- 
