@@ -3,60 +3,58 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 
-USER_ROLES = (
-    ('user', 'Пользователь'),
-    ('moderator', 'Модератор'),
-    ('admin', 'Администратор'),
-)
-
-
-class User(AbstractUser):
-    email = models.EmailField(unique=True)
-    bio = models.TextField(blank=True, null=True)
-    role = models.CharField(max_length=20, choices=USER_ROLES, default='user')
+class Main(Name):
+    slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
-        ordering = ('id',)
-
-    def __str__(self):
-        return self.username
+        abstract = True
 
 
-class Category(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True)
+class Category(Main):
 
-    def __str__(self):
-        return self.name
-
-
-class Genre(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True)
-
-    def __str__(self):
-        return self.name
+    class Meta:
+        verbose_name = 'категория'
+        verbose_name_plural = 'Категории'
 
 
-class Title(models.Model):
-    name = models.CharField(max_length=256)
-    year = models.PositiveIntegerField()
+class Genre(Main):
+
+    class Meta:
+        verbose_name = 'жанр'
+        verbose_name_plural = 'Жанры'
+
+
+class Title(Name):
+    year = models.IntegerField()
     description = models.TextField(blank=True, null=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL,
-                                 null=True, related_name='titles')
-    genre = models.ManyToManyField(Genre, related_name='titles',
-                                   through='GenreTitle')
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        related_name='titles',
+        blank=True,
+        null=True
+    )
+    genre = models.ManyToManyField(
+        Genre,
+        through='GenreTitle',
+        related_name='titles'
+    )
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        verbose_name = 'произведение'
+        verbose_name_plural = 'Произведения'
 
 
 class GenreTitle(models.Model):
-    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = 'жанр и произведение'
+        verbose_name_plural = 'Жанры и произведения'
 
     def __str__(self):
-        return f'{self.genre} {self.title}'
+        return f'Жанр произведения {self.title} - {self.genre}.'
 
 
 class Review(models.Model):
@@ -91,3 +89,5 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.text[:20]
+
+ 
