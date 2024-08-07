@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 
 from reviews.models import Category, Genre, Title
-from api_yamdb.api_yamdb import settings
+# from api_yamdb.api_yamdb import settings
 from api.serializers import (CategorySerializer, GenreSerializer,
                              TitleSerializer, SignUpSerializer,
                              GetTokenSerializer, YamdbUserSerializer)
@@ -51,7 +51,7 @@ class SignUpView(APIView):
             confirmation_code = default_token_generator.make_token(user)
             send_mail('Код подтверждения регистрации',
                       f'Ваш код подтвержения: {confirmation_code}',
-                      settings.ADMIN_EMAIL,
+                      'admin@mail.ru',
                       [request.data.get('email')])
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
