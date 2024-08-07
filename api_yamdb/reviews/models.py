@@ -4,12 +4,18 @@ from django.db import models
 User = get_user_model()
 
 
-class Main(models.Model):
-    name = models.TextField(max_length=128)
-    slug = models.SlugField(max_length=64, unique=True)
+class Name(models.Model):
+    name = models.TextField(max_length=256)
+
+    class Meta:
+        abstract = True
 
     def __str__(self):
         return self.name
+
+
+class Main(Name):
+    slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
         abstract = True
@@ -29,8 +35,7 @@ class Genre(Main):
         verbose_name_plural = 'Жанры'
 
 
-class Title(models.Model):
-    name = models.TextField(max_length=128)
+class Title(Name):
     year = models.IntegerField()
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(
@@ -49,9 +54,6 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
-
-    def __str__(self):
-        return self.name
 
 
 class GenreTitle(models.Model):
