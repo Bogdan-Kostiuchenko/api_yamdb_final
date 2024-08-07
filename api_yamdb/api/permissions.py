@@ -1,9 +1,19 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-class ReadOnly(BasePermission):
+class IsAdminOrSuperCanDestroy(BasePermission):
+    
     def has_permission(self, request, view):
-        return request.method in SAFE_METHODS
+        if request.method not in ['PATCH', 'DELETE']:
+            return (request.user.is_authenticated
+                    and (request.user.is_superuser
+                         or request.user.role == 'admin'))
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        return (request.user.is_authenticated
+                and (request.user.is_superuser
+                     or request.user.role == 'admin'))
 
 
 class IsAdminOrReadOnly(BasePermission):

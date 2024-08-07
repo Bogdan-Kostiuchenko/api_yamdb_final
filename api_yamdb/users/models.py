@@ -2,17 +2,16 @@ from django.contrib.auth.models import AbstractUser, Permission, Group
 from django.core.validators import MaxLengthValidator
 from django.db import models
 
-from users.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
+from users.validators import validate_email, validate_username
+from users.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, USERS_ROLES
 
 
 class YamdbUser(AbstractUser):
 
-    USERS_ROLES = [('user', 'Пользователь'),
-                   ('moderator', 'Модератор'),
-                   ('admin', 'Администратор')]
-
     username = models.SlugField('username пользователя',
                                 max_length=NAME_MAX_LENGTH,
+                                validators=(MaxLengthValidator,
+                                            validate_username),
                                 blank=False,
                                 unique=True)
     first_name = models.CharField('Имя пользователя',
@@ -24,6 +23,8 @@ class YamdbUser(AbstractUser):
                                  validators=(MaxLengthValidator,),
                                  blank=True,)
     email = models.EmailField('Электронная почта',
+                              validators=(MaxLengthValidator,
+                                          validate_email),
                               unique=True,
                               max_length=EMAIL_MAX_LENGTH)
     bio = models.TextField('Биография', blank=True)
@@ -34,6 +35,7 @@ class YamdbUser(AbstractUser):
     role = models.CharField('Роль пользователя',
                             choices=USERS_ROLES,
                             max_length=NAME_MAX_LENGTH,
+                            validators=(MaxLengthValidator,),
                             blank=False,
                             default='user')
 

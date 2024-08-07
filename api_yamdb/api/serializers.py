@@ -1,3 +1,4 @@
+import users.validators as uservalid
 from rest_framework import serializers
 
 from users.models import YamdbUser
@@ -25,7 +26,6 @@ class TitleSerializer(serializers.ModelSerializer):
         model = Title
 
 
-
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField()
     confirmation_code = serializers.CharField()
@@ -51,11 +51,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         ]
 
     def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Запрещено использовать username - me!'
-            )
-        return value
+        return uservalid.validate_username(value)
 
 
 class YamdbUserSerializer(serializers.ModelSerializer):
@@ -74,12 +70,20 @@ class YamdbUserSerializer(serializers.ModelSerializer):
                   'bio',
                   'role')
 
-    def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Запрещено использовать username - me!'
-            )
-        return value
+    # def validate_username(self, value):
+    #     if value == 'me':
+    #         raise serializers.ValidationError(
+    #             'Запрещено использовать username - me!'
+    #         )
+    #     return value
+
+    def validate_username(self, username):
+        """Проверка логина."""
+        return uservalid.validate_username(username)
+
+    def validate_email(self, email):
+        """Проверка email."""
+        return uservalid.validate_email(email)
 
 # class AdminUserSerializer(serializers.ModelSerializer):
 #     """Сериалайзер для пользователя с ролью 'admin'."""
