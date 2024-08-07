@@ -26,14 +26,14 @@ class Category(Main):
         verbose_name_plural = 'Категории'
 
 
-class Genre(models.Model):
+class Genre(Main):
 
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
 
 
-class Title(models.Model):
+class Title(Name):
     year = models.IntegerField()
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(
