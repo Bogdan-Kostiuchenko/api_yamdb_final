@@ -3,6 +3,13 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 
+class Name(models.Model):
+    name = models.CharField(max_length=256)
+
+    class Meta:
+        abstract = True
+
+
 class Main(Name):
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -89,5 +96,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.text[:20]
-
- 
