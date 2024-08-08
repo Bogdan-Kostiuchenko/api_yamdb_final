@@ -28,7 +28,7 @@ Python 3.9, Django 3.2, DRF, JWT
 Клонировать репозиторий и перейти в него в командной строке:
 
 ```
-git clone https://github.com/khamaran/api_final_yatube.git
+git clone https://github.com/Izyapa/api_yamdb.git
 cd yatube_api
 ```
 

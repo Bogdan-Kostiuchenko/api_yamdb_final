@@ -1,4 +1,3 @@
-from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
@@ -19,15 +18,23 @@ class NameSlugMixin(models.Model):
 class Category(NameSlugMixin):
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
+
+    def __str__(self):
+        return self.name
 
 
 class Genre(NameSlugMixin):
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
+
+    def __str__(self):
+        return self.name
 
 
 class Title(models.Model):
@@ -37,9 +44,8 @@ class Title(models.Model):
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
-        related_name='titles',
-        blank=True,
-        null=True
+        null=True,
+        related_name='titles'
     )
     genre = models.ManyToManyField(
         Genre,
@@ -48,6 +54,7 @@ class Title(models.Model):
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
 
@@ -78,6 +85,7 @@ class Review(models.Model):
     pub_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ('pub_date',)
         constraints = [
             models.UniqueConstraint(
                 fields=['title', 'author'],
@@ -96,6 +104,9 @@ class Comment(models.Model):
     author = models.ForeignKey(YamdbUser, on_delete=models.CASCADE,
                                related_name='comments')
     pub_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('pub_date',)
 
     def __str__(self):
         return self.text[:20]
