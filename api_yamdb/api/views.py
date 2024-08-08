@@ -1,6 +1,5 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets, mixins
@@ -143,7 +142,7 @@ class SignUpView(APIView):
             user = YamdbUser.objects.get(
                 username=username,
                 email=email
-                )
+            )
             confirmation_code = default_token_generator.make_token(user)
             send_mail('Код подтверждения регистрации',
                       f'Ваш код подтвержения: {confirmation_code}',

@@ -18,7 +18,7 @@ def validate_username(username):
     if username == 'me':
         raise ValidationError(
             'Запрещено использовать username - me!'
-            )
+        )
     if len(username) > NAME_MAX_LENGTH:
         raise ValidationError(
             f'Длина логина превышает допустимое значение '
