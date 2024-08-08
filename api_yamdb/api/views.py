@@ -3,7 +3,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, status, viewsets, mixins
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from rest_framework.generics import TokenObtainPairView
@@ -22,12 +22,20 @@ from api.permissions import IsAdminOrReadOnly
 from users.models import YamdbUser
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class Main(mixins.ListModelMixin, mixins.CreateModelMixin,
+           mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    filter_backends = (filters.SearchFilter, )
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly, )
+    lookup_field = 'slug'
+
+
+class CategoryViewSet(Main):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(Main):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
