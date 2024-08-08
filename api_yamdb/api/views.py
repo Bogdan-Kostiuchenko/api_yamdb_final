@@ -12,14 +12,17 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
+from django_filters.rest_framework import DjangoFilterBackend
 
 from reviews.models import Category, Genre, Title
 # from api_yamdb.api_yamdb import settings
 from api.serializers import (CategorySerializer, GenreSerializer,
                              TitleSerializer, SignUpSerializer,
-                             GetTokenSerializer, YamdbUserSerializer)
+                             GetTokenSerializer, YamdbUserSerializer,
+                             TitleCreateUpdateSerializer)
 from api.permissions import IsAdminOrReadOnly
 from users.models import YamdbUser
+from api.filters import TitleFilter
 
 
 class Main(mixins.ListModelMixin, mixins.CreateModelMixin,
@@ -40,9 +43,19 @@ class GenreViewSet(Main):
     serializer_class = GenreSerializer
 
 
-class TitleViewSet(viewsets.ModelViewSet):
+class TitleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
+                   mixins.CreateModelMixin, mixins.UpdateModelMixin,
+                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Title.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilter
+    permission_classes = (IsAdminOrReadOnly,)
     serializer_class = TitleSerializer
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'partial_update'):
+            return TitleCreateUpdateSerializer
+        return TitleSerializer
 
 
 class SignUpView(APIView):

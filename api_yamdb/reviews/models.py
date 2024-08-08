@@ -5,35 +5,33 @@ from django.db import models
 from users.models import YamdbUser
 
 
-class Name(models.Model):
+class NameSlugMixin(models.Model):
     name = models.CharField(max_length=256)
-
-    class Meta:
-        abstract = True
-
-
-class Main(Name):
     slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
         abstract = True
 
+    def __str__(self):
+        return self.name
 
-class Category(Main):
+
+class Category(NameSlugMixin):
 
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(Main):
+class Genre(NameSlugMixin):
 
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
 
 
-class Title(Name):
+class Title(models.Model):
+    name = models.CharField(max_length=256)
     year = models.IntegerField()
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(
@@ -52,6 +50,9 @@ class Title(Name):
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
+
+    def __str__(self):
+        return self.name
 
 
 class GenreTitle(models.Model):
