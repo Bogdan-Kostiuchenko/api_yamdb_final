@@ -1,36 +1,39 @@
-
 import re
+
 from django.core.exceptions import ValidationError
-from users.constans import EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, USERS_ROLES
+
+from users.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, ROLES
 
 
-# def get_role_max_length():
-#     """Длина поля роли."""
-#     return max(len(role[0]) for role in USERS_ROLES.choices)
+def check_role_exists(role):
+    for role_ex in ROLES:
+        if role_ex == role:
+            return
+    raise ValidationError(f'Неверная роль "{role}"')
 
 
 def validate_username(username):
-    """Проверка логина."""
-    if username.lower() == 'me':
+    pattern = r'^[\w\d.@+-]+$'
+
+    if username == 'me':
         raise ValidationError(
-            'Нельзя назвать логин "me".'
-        )
+            'Запрещено использовать username - me!'
+            )
     if len(username) > NAME_MAX_LENGTH:
         raise ValidationError(
-            f'Длина логина не должна превышать '
+            f'Длина логина превышает допустимое значение '
             f'{NAME_MAX_LENGTH} символов.'
         )
-    if not re.fullmatch(r'^[\w\d\.@+-]+$', username):
-        raise ValidationError(
-            'Логин содержит недопустимые символы.'
-        )
-    return username
+    if re.search(pattern, username):
+        return username
+    else:
+        raise ValidationError('Логин содержит недопустимые символы.')
 
 
 def validate_email(email):
     """Проверка email."""
     if len(email) > EMAIL_MAX_LENGTH:
         raise ValidationError(
-            'Email слишком длинный.'
+            'Email превышает допустимую длину, сократите количество символов.'
         )
     return email

@@ -5,3 +5,5 @@ EMAIL_MAX_LENGTH = 254
 USERS_ROLES = [('user', 'Пользователь'),
                ('moderator', 'Модератор'),
                ('admin', 'Администратор')]
+
+ROLES = ('admin', 'moderator', 'user')

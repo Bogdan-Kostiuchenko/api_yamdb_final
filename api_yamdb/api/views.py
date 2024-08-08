@@ -1,26 +1,42 @@
-from django.shortcuts import render
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-
 from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-# from rest_framework.generics import TokenObtainPairView
-from rest_framework.permissions import AllowAny, IsAuthenticated
-# from rest_framework.permissions import IsAdminOrReadOnly
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import action
-from django.core.exceptions import ValidationError 
 
-from reviews.models import Category, Genre, Title
-# from api_yamdb.api_yamdb import settings
+
+from api.permissions import IsAdminOrReadOnly, IsAdminOrSuperCanDestroy
 from api.serializers import (CategorySerializer, GenreSerializer,
                              TitleSerializer, SignUpSerializer,
-                             GetTokenSerializer, YamdbUserSerializer)
-from api.permissions import IsAdminOrReadOnly, IsAdminOrModeratorOrReadOnly, IsAdminOrSuperCanDestroy
+                             GetTokenSerializer, YamdbUserSerializer,
+                             YamdbUserSerializerWithoutRole)
+from reviews.models import Category, Genre, Title
 from users.models import YamdbUser
+
+
+def check_users(username, email):
+    try:
+        YamdbUser.objects.get(email=email)
+    except YamdbUser.DoesNotExist:
+        pass
+    else:
+        return Response({'detail': f'Email {email} уже есть'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        YamdbUser.objects.get(username=username)
+    except YamdbUser.DoesNotExist:
+        pass
+    else:
+        return Response({'detail': 'Username {username} уже есть'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    return None
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -44,22 +60,31 @@ class SignUpView(APIView):
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            user = get_object_or_404(
-                YamdbUser, username=serializer.validated_data["username"]
+        if serializer.is_valid():
+            email = request.data.get('email')
+            username = request.data.get('username')
+
+            if YamdbUser.objects.filter(email=email,
+                                        username=username).exists():
+                return Response({'detail': 'Пользователь уже зарегистрирован'},
+                                status=status.HTTP_200_OK)
+
+            checking = check_users(username, email)
+            if checking is not None:
+                return checking
+
+            serializer.save()
+            user = YamdbUser.objects.get(
+                username=username,
+                email=email
                 )
-            # user = YamdbUser.objects.get(
-            #     username=request.data.get('username'),
-            #     email=request.data.get('email')
-            # )
             confirmation_code = default_token_generator.make_token(user)
             send_mail('Код подтверждения регистрации',
                       f'Ваш код подтвержения: {confirmation_code}',
                       'admin@mail.ru',
-                      [request.data.get('email')])
-            return Response(serializer.data, status=status.HTTP_200_OK)
+                      [email])
+            return Response(request.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class TokenView(APIView):
@@ -92,51 +117,41 @@ class UsersViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
 
     lookup_field = 'username'
-    lookup_value_regex = r'[\w\@\.\+\-]+'
     search_fields = ('username',)
 
     @action(detail=False, methods=['get', 'patch'], url_path='me',
             url_name='me', permission_classes=(IsAuthenticated,))
-    def about_me(self, request):
+    def get_update_me(self, request):
         serializer = YamdbUserSerializer(request.user)
         if request.method == 'PATCH':
-            serializer = YamdbUserSerializer(
-                request.user, data=request.data, partial=True
-            )
+            serializer = None
+            if 'role' in request.data:
+                serializer = YamdbUserSerializerWithoutRole(
+                        request.user, data=request.data, partial=True
+                    )
+            else:
+                serializer = YamdbUserSerializer(
+                    request.user, data=request.data, partial=True
+                )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    # @action(
-    #     methods=['GET', 'PATCH'], detail=False, url_path='me',
-    #     permission_classes=(IsAuthenticated,)
-    # )
-    # def get_update_me(self, request):
-    #     serializer = self.get_serializer(
-    #         request.user,
-    #         data=request.data,
-    #         partial=True
-    #     if serializer.is_valid():
-    #         if self.request.method == 'PATCH':
-    #             serializer.validated_data.pop('role', None)
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(
-    #         serializer.errors, status=status.HTTP_400_BAD_REQUEST
-    #     )
-    #     )
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
+    def create(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        username = request.data.get('username')
+        checking = check_users(username, email)
+        if checking is not None:
+            return checking
 
-    # def destroy(self, request, username):
-    #     if username == 'me':
-    #         return Response(
-    #             {'error': 'Нельзя удалить себя!'},
-    #             status=status.HTTP_405_METHOD_NOT_ALLOWED
-    #         )
-    #     return super().destroy(request, username)
+        serializer = YamdbUserSerializerWithoutRole(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(request.data, status=status.HTTP_201_CREATED)
+        return Response(request.data, status=status.HTTP_400_BAD_REQUEST)
