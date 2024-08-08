@@ -1,29 +1,30 @@
+from django.db import models
 from django.contrib.auth.models import AbstractUser, Permission, Group
 from django.core.validators import MaxLengthValidator
-from django.db import models
 
-from users.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
+from users.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, USERS_ROLES
+from users.validators import (validate_email,
+                              validate_username,
+                              check_role_exists)
 
 
 class YamdbUser(AbstractUser):
 
-    USERS_ROLES = [('user', 'Пользователь'),
-                   ('moderator', 'Модератор'),
-                   ('admin', 'Администратор')]
-
     username = models.SlugField('username пользователя',
                                 max_length=NAME_MAX_LENGTH,
+                                validators=(MaxLengthValidator,
+                                            validate_username),
                                 blank=False,
                                 unique=True)
     first_name = models.CharField('Имя пользователя',
                                   max_length=NAME_MAX_LENGTH,
-                                  validators=(MaxLengthValidator,),
                                   blank=True,)
     last_name = models.CharField('Фамилия',
                                  max_length=NAME_MAX_LENGTH,
-                                 validators=(MaxLengthValidator,),
                                  blank=True,)
     email = models.EmailField('Электронная почта',
+                              validators=(MaxLengthValidator,
+                                          validate_email),
                               unique=True,
                               max_length=EMAIL_MAX_LENGTH)
     bio = models.TextField('Биография', blank=True)
@@ -35,6 +36,7 @@ class YamdbUser(AbstractUser):
                             choices=USERS_ROLES,
                             max_length=NAME_MAX_LENGTH,
                             blank=False,
+                            validators=(check_role_exists,),
                             default='user')
 
     groups = models.ManyToManyField(
