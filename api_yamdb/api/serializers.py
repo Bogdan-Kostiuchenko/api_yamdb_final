@@ -2,6 +2,8 @@ from datetime import datetime as dt
 
 from rest_framework import serializers
 
+import users.validators as uservalid
+from users.constans import USERS_ROLES
 from users.models import YamdbUser
 from reviews.models import Category, Genre, Title
 from django.db.models import Avg
@@ -58,7 +60,6 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
         score = obj.reviews.aggregate(Avg('score'))
         return score['score__avg']
 
-
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField()
     confirmation_code = serializers.CharField()
@@ -69,33 +70,28 @@ class GetTokenSerializer(serializers.Serializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    # username = serializers.CharField()
-    # email = serializers.EmailField()
+    username = serializers.CharField()
+    email = serializers.EmailField()
 
     class Meta:
         model = YamdbUser
-        fields = ('username', 'email')
-        validators = [
-            serializers.UniqueTogetherValidator(
-                queryset=YamdbUser.objects.all(),
-                fields=('username', 'email'),
-                message=' Пользователь с таким именем уже существует!'
-            )
-        ]
+        fields = ('username', 'email', 'role')
 
-    def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Запрещено использовать username - me!'
-            )
-        return value
+    def validate(self, data):
+        uservalid.validate_username(data['username'])
+
+        if 'email' in data:
+            uservalid.validate_email(data['email'])
+
+        if 'role' in data:
+            uservalid.check_role_exists(data['role'])
+        return data
 
 
 class YamdbUserSerializer(serializers.ModelSerializer):
     """Сериализатор пользователей."""
     username = serializers.CharField(required=True)
     email = serializers.CharField(required=True)
-    role = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = YamdbUser
@@ -107,9 +103,33 @@ class YamdbUserSerializer(serializers.ModelSerializer):
                   'bio',
                   'role')
 
-    def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Запрещено использовать username - me!'
-            )
-        return value
+    def validate(self, data):
+        if 'username' in data:
+            uservalid.validate_username(data['username'])
+        if 'email' in data:
+            uservalid.validate_email(data['email'])
+        if 'role' in data:
+            uservalid.check_role_exists(data['role'])
+        return data
+
+
+class YamdbUserSerializerWithoutRole(serializers.ModelSerializer):
+    """Сериализатор пользователей."""
+    username = serializers.CharField(required=True)
+    email = serializers.CharField(required=True)
+
+    class Meta:
+        model = YamdbUser
+        ordering = ['username']
+        fields = ('username',
+                  'email',
+                  'first_name',
+                  'last_name',
+                  'bio')
+
+    def validate(self, data):
+        if 'username' in data:
+            uservalid.validate_username(data['username'])
+        if 'email' in data:
+            uservalid.validate_email(data['email'])
+        return data
