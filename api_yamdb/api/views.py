@@ -1,27 +1,28 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets, mixins
 from rest_framework.decorators import action
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.views import APIView
 
-
-
-from api.permissions import IsAdminOrReadOnly, IsAdminOrSuperCanDestroy, YamdbUserSerializerWithoutRole
-from api.serializers import (CategorySerializer, GenreSerializer,
-                             TitleSerializer, SignUpSerializer,
-                             GetTokenSerializer, YamdbUserSerializer,
-                             TitleCreateUpdateSerializer)
-from reviews.models import Category, Genre, Title
-from users.models import YamdbUser
 from api.filters import TitleFilter
+from api.permissions import (IsAdminOrReadOnly, IsAdminOrSuperCanDestroy,
+                             IsAuthorOrAdminOrModerator)
+from api.serializers import (CategorySerializer, GenreSerializer,
+                             TitleSerializer, ReviewSerializer,
+                             CommentSerializer, SignUpSerializer,
+                             GetTokenSerializer, YamdbUserSerializer,
+                             YamdbUserSerializerWithoutRole,
+                             TitleCreateUpdateSerializer)
+from reviews.models import Category, Genre, Title, Review, Comment
+from users.models import YamdbUser
+
 
 def check_users(username, email):
     try:
@@ -41,7 +42,7 @@ def check_users(username, email):
                         status=status.HTTP_400_BAD_REQUEST)
 
     return None
- 
+
 
 class Main(mixins.ListModelMixin, mixins.CreateModelMixin,
            mixins.DestroyModelMixin, viewsets.GenericViewSet):
@@ -52,7 +53,6 @@ class Main(mixins.ListModelMixin, mixins.CreateModelMixin,
 
 
 class CategoryViewSet(Main):
-  
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
@@ -75,6 +75,49 @@ class TitleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         if self.action in ('create', 'partial_update'):
             return TitleCreateUpdateSerializer
         return TitleSerializer
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,
+                          IsAuthorOrAdminOrModerator)
+
+    def get_queryset(self):
+        title_id = self.kwargs.get('title_id')
+        return Review.objects.filter(title_id=title_id)
+
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,
+                          IsAuthorOrAdminOrModerator)
+
+    def get_queryset(self):
+        review_id = self.kwargs.get('review_id')
+        return Comment.objects.filter(review_id=review_id)
+
+    def perform_create(self, serializer):
+        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
+        serializer.save(author=self.request.user, review=review)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
 
 
 class SignUpView(APIView):
@@ -137,7 +180,6 @@ class UsersViewSet(viewsets.ModelViewSet):
                           IsAdminOrSuperCanDestroy)
 
     filter_backends = (filters.SearchFilter,)
-    pagination_class = PageNumberPagination
 
     lookup_field = 'username'
     search_fields = ('username',)
@@ -150,8 +192,8 @@ class UsersViewSet(viewsets.ModelViewSet):
             serializer = None
             if 'role' in request.data:
                 serializer = YamdbUserSerializerWithoutRole(
-                        request.user, data=request.data, partial=True
-                    )
+                    request.user, data=request.data, partial=True
+                )
             else:
                 serializer = YamdbUserSerializer(
                     request.user, data=request.data, partial=True

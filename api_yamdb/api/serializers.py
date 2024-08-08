@@ -1,28 +1,23 @@
-from datetime import datetime as dt
-
+from django.db.models import Avg
 from rest_framework import serializers
 
-import users.validators as uservalid
-from users.constans import USERS_ROLES
+from reviews.models import Category, Genre, Title, Review, Comment
 from users.models import YamdbUser
-from reviews.models import Category, Genre, Title
-from django.db.models import Avg
-
-TITLES_MIN_YEAR = 1000
+import users.validators as uservalid
 
 
 class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('name', 'slug')
         model = Category
+        fields = ('name', 'slug')
 
 
 class GenreSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('name', 'slug')
         model = Genre
+        fields = ('name', 'slug')
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -59,6 +54,37 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     def get_rating(self, obj):
         score = obj.reviews.aggregate(Avg('score'))
         return score['score__avg']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(slug_field='username',
+                                          read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
+
+    def validate(self, data):
+        request = self.context.get('request')
+        if request and request.method == 'POST':
+            title_id = self.context['view'].kwargs.get('title_id')
+            if Review.objects.filter(title_id=title_id,
+                                     author=request.user).exists():
+                raise serializers.ValidationError(
+                    'Оставить отзыв о произведении можно только 1 раз. '
+                    'Вы уже оставляли отзыв о данном произведении.'
+                )
+        return data
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(slug_field='username',
+                                          read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ('id', 'text', 'author', 'pub_date')
+
 
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField()
