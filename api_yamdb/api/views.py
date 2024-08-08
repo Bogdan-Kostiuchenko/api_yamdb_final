@@ -1,23 +1,27 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets
+
+from rest_framework import filters, status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import action
+from django_filters.rest_framework import DjangoFilterBackend
 
 
-from api.permissions import IsAdminOrReadOnly, IsAdminOrSuperCanDestroy
+
+from api.permissions import IsAdminOrReadOnly, IsAdminOrSuperCanDestroy, YamdbUserSerializerWithoutRole
 from api.serializers import (CategorySerializer, GenreSerializer,
                              TitleSerializer, SignUpSerializer,
                              GetTokenSerializer, YamdbUserSerializer,
-                             YamdbUserSerializerWithoutRole)
+                             TitleCreateUpdateSerializer)
 from reviews.models import Category, Genre, Title
 from users.models import YamdbUser
-
+from api.filters import TitleFilter
 
 def check_users(username, email):
     try:
@@ -37,21 +41,40 @@ def check_users(username, email):
                         status=status.HTTP_400_BAD_REQUEST)
 
     return None
+ 
+
+class Main(mixins.ListModelMixin, mixins.CreateModelMixin,
+           mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    filter_backends = (filters.SearchFilter, )
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly, )
+    lookup_field = 'slug'
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(Main):
+  
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(Main):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
 
-class TitleViewSet(viewsets.ModelViewSet):
+class TitleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
+                   mixins.CreateModelMixin, mixins.UpdateModelMixin,
+                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Title.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilter
+    permission_classes = (IsAdminOrReadOnly,)
     serializer_class = TitleSerializer
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'partial_update'):
+            return TitleCreateUpdateSerializer
+        return TitleSerializer
 
 
 class SignUpView(APIView):
