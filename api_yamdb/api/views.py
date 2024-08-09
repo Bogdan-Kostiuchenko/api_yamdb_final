@@ -1,24 +1,27 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets, mixins
 from rest_framework.decorators import action
-from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+from rest_framework.permissions import (
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 
 from api.filters import TitleFilter
-from api.permissions import (IsAdminOrReadOnly, IsAdminOrSuperCanDestroy,
-                             IsAuthorOrAdminOrModerator)
-from api.serializers import (CategorySerializer, GenreSerializer,
-                             TitleSerializer, ReviewSerializer,
-                             CommentSerializer, SignUpSerializer,
-                             GetTokenSerializer, YamdbUserSerializer,
-                             YamdbUserSerializerWithoutRole,
-                             TitleCreateUpdateSerializer)
+from api.permissions import (
+    IsAdminOrReadOnly, IsAdminOrSuperCanDestroy, IsAuthorOrAdminOrModerator
+)
+from api.serializers import (
+    CategorySerializer, GenreSerializer, TitleSerializer, ReviewSerializer,
+    CommentSerializer, SignUpSerializer, GetTokenSerializer,
+    YamdbUserSerializer, YamdbUserSerializerWithoutRole,
+    TitleCreateUpdateSerializer
+)
 from reviews.models import Category, Genre, Title, Review, Comment
 from users.models import YamdbUser
 
@@ -43,20 +46,22 @@ def check_users(username, email):
     return None
 
 
-class Main(mixins.ListModelMixin, mixins.CreateModelMixin,
-           mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class CategoryGenreMixinViewSet(
+    mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
     filter_backends = (filters.SearchFilter, )
     search_fields = ('name',)
     permission_classes = (IsAdminOrReadOnly, )
     lookup_field = 'slug'
 
 
-class CategoryViewSet(Main):
+class CategoryViewSet(CategoryGenreMixinViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(Main):
+class GenreViewSet(CategoryGenreMixinViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
@@ -64,7 +69,7 @@ class GenreViewSet(Main):
 class TitleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                    mixins.CreateModelMixin, mixins.UpdateModelMixin,
                    mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
@@ -87,12 +92,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
                           IsAuthorOrAdminOrModerator)
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        return Review.objects.filter(title_id=title_id)
+        title = get_object_or_404(Title, id=self.kwargs['title_id'])
+        return Review.objects.filter(title=title)
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(
+            author=self.request.user,
+            title=get_object_or_404(Title, id=self.kwargs['title_id'])
+        )
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
@@ -106,12 +113,14 @@ class CommentViewSet(viewsets.ModelViewSet):
                           IsAuthorOrAdminOrModerator)
 
     def get_queryset(self):
-        review_id = self.kwargs.get('review_id')
+        review_id = self.kwargs['review_id']
         return Comment.objects.filter(review_id=review_id)
 
     def perform_create(self, serializer):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_id'))
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(
+            author=self.request.user,
+            review=get_object_or_404(Review, id=self.kwargs['review_id'])
+        )
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':

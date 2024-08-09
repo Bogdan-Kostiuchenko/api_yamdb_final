@@ -1,0 +1,16 @@
+NAME_MAX_LENGTH = 150
+
+MIN_SCORE = 1
+MAX_SCORE = 10
+
+EMAIL_MAX_LENGTH = 254
+
+USER_ROLE_USER = 'user'
+USER_ROLE_MODERATOR = 'moderator'
+USER_ROLE_ADMIN = 'admin'
+
+USERS_ROLES = [(USER_ROLE_USER, 'Пользователь'),
+               (USER_ROLE_MODERATOR, 'Модератор'),
+               (USER_ROLE_ADMIN, 'Администратор')]
+
+ROLES = (USER_ROLE_ADMIN, USER_ROLE_MODERATOR, USER_ROLE_USER)

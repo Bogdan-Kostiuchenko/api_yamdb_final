@@ -1,5 +1,7 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from reviews.constans import USER_ROLE_MODERATOR, USER_ROLE_ADMIN
+
 
 class IsAdminOrSuperCanDestroy(BasePermission):
 
@@ -38,4 +40,4 @@ class IsAuthorOrAdminOrModerator(BasePermission):
             return True
         return (request.user == obj.author
                 or request.user.is_superuser
-                or request.user.role in ('admin', 'moderator'))
+                or request.user.role in (USER_ROLE_ADMIN, USER_ROLE_MODERATOR))

@@ -1,15 +1,19 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
+from reviews.constans import MIN_SCORE, MAX_SCORE
 from users.models import YamdbUser
 
 
 class NameSlugMixin(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=256, verbose_name='имя')
+    slug = models.SlugField(max_length=50, verbose_name='слаг', unique=True)
 
     class Meta:
         abstract = True
+        ordering = ('name',)
+        verbose_name = 'имя и слаг'
+        verbose_name_plural = 'Имена и слаги'
 
     def __str__(self):
         return self.name
@@ -18,23 +22,15 @@ class NameSlugMixin(models.Model):
 class Category(NameSlugMixin):
 
     class Meta:
-        ordering = ('name',)
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
-
-    def __str__(self):
-        return self.name
 
 
 class Genre(NameSlugMixin):
 
     class Meta:
-        ordering = ('name',)
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
-
-    def __str__(self):
-        return self.name
 
 
 class Title(models.Model):
@@ -74,39 +70,51 @@ class GenreTitle(models.Model):
         return f'Жанр произведения {self.title} - {self.genre}.'
 
 
-class Review(models.Model):
-    title = models.ForeignKey(Title, on_delete=models.CASCADE,
-                              related_name='reviews')
-    text = models.TextField()
-    author = models.ForeignKey(YamdbUser, on_delete=models.CASCADE,
-                               related_name='reviews')
-    score = models.PositiveIntegerField(validators=[MinValueValidator(1),
-                                                    MaxValueValidator(10)])
-    pub_date = models.DateTimeField(auto_now_add=True)
+class ReviewCommentModel(models.Model):
+    text = models.TextField(verbose_name='текст')
+    author = models.ForeignKey(
+        YamdbUser, on_delete=models.CASCADE, related_name='%(class)ss',
+        verbose_name='автор'
+    )
+    pub_date = models.DateTimeField(
+        verbose_name='время публикации', auto_now_add=True
+    )
 
     class Meta:
+        abstract = True
         ordering = ('pub_date',)
-        constraints = [
+
+    def __str__(self):
+        return self.text[:20]
+
+
+class Review(ReviewCommentModel):
+    title = models.ForeignKey(
+        Title, on_delete=models.CASCADE, related_name='reviews',
+        verbose_name='произведение'
+    )
+    score = models.PositiveIntegerField(
+        verbose_name='оценка произведения',
+        validators=[MinValueValidator(MIN_SCORE), MaxValueValidator(MAX_SCORE)]
+    )
+
+    class Meta:
+        verbose_name = 'отзыв'
+        verbose_name_plural = 'Отзывы'
+        constraints = (
             models.UniqueConstraint(
                 fields=['title', 'author'],
                 name='unique_title_author'
-            )
-        ]
-
-    def __str__(self):
-        return self.text[:20]
+            ),
+        )
 
 
-class Comment(models.Model):
-    text = models.TextField()
-    review = models.ForeignKey(Review, on_delete=models.CASCADE,
-                               related_name='comments')
-    author = models.ForeignKey(YamdbUser, on_delete=models.CASCADE,
-                               related_name='comments')
-    pub_date = models.DateTimeField(auto_now_add=True)
+class Comment(ReviewCommentModel):
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE, related_name='comments',
+        verbose_name='отзыв'
+    )
 
     class Meta:
-        ordering = ('pub_date',)
-
-    def __str__(self):
-        return self.text[:20]
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
