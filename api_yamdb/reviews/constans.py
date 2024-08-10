@@ -15,3 +15,4 @@ USERS_ROLES = [(USER_ROLE_USER, 'Пользователь'),
                (USER_ROLE_ADMIN, 'Администратор')]
 
 ROLES = (USER_ROLE_ADMIN, USER_ROLE_MODERATOR, USER_ROLE_USER)
+EMAIL_ADMIN = 'admin@mail.ru'

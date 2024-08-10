@@ -5,10 +5,9 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets, mixins
 from rest_framework.decorators import action
-from rest_framework.permissions import (
-    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
-)
-from rest_framework.response import Response
+from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
+                                        AllowAny,
+                                        IsAuthenticated)
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 
@@ -23,6 +22,7 @@ from api.serializers import (
     TitleCreateUpdateSerializer
 )
 from reviews.models import Category, Genre, Title, Review, Comment
+from reviews.constans import EMAIL_ADMIN
 from users.models import YamdbUser
 
 
@@ -153,7 +153,7 @@ class SignUpView(APIView):
             confirmation_code = default_token_generator.make_token(user)
             send_mail('Код подтверждения регистрации',
                       f'Ваш код подтвержения: {confirmation_code}',
-                      'admin@mail.ru',
+                      EMAIL_ADMIN,
                       [email])
             return Response(request.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -181,7 +181,7 @@ class TokenView(APIView):
 
 class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = YamdbUserSerializer
-    queryset = YamdbUser.objects.order_by('pk')
+    queryset = YamdbUser.objects
     permission_classes = (IsAdminOrReadOnly,
                           IsAdminOrSuper)
 
@@ -192,7 +192,7 @@ class UsersViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'], url_path='me',
             url_name='me', permission_classes=(IsAuthenticated,))
-    def get_update_me(self, request):
+    def get_update(self, request):
         serializer = YamdbUserSerializer(request.user)
         if request.method == 'PATCH':
             serializer = None

@@ -1,5 +1,4 @@
 from django.contrib.auth.models import AbstractUser, Permission, Group
-from django.core.validators import MaxLengthValidator
 from django.db import models
 
 from reviews.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, USERS_ROLES
