@@ -182,7 +182,7 @@ class TokenView(APIView):
 
 class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = YamdbUserSerializer
-    queryset = YamdbUser.objects
+    queryset = YamdbUser.objects.all()
     permission_classes = (IsAdminOrReadOnly,
                           IsAdminOrSuper)
 
