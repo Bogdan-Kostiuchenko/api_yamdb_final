@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from api.filters import TitleFilter
 from api.permissions import (
-    IsAdminOrReadOnly, IsAdminOrSuperCanDestroy, IsAuthorOrAdminOrModerator
+    IsAdminOrReadOnly, IsAdminOrSuper, IsAuthorOrAdminOrModerator
 )
 from api.serializers import (
     CategorySerializer, GenreSerializer, TitleSerializer, ReviewSerializer,
@@ -66,9 +66,7 @@ class GenreViewSet(CategoryGenreMixinViewSet):
     serializer_class = GenreSerializer
 
 
-class TitleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
-                   mixins.CreateModelMixin, mixins.UpdateModelMixin,
-                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
@@ -185,7 +183,7 @@ class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = YamdbUserSerializer
     queryset = YamdbUser.objects.order_by('pk')
     permission_classes = (IsAdminOrReadOnly,
-                          IsAdminOrSuperCanDestroy)
+                          IsAdminOrSuper)
 
     filter_backends = (filters.SearchFilter,)
 

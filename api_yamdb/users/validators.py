@@ -2,7 +2,7 @@ import re
 
 from django.core.exceptions import ValidationError
 
-from api_yamdb.reviews.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, ROLES
+from reviews.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, ROLES
 
 
 def check_role_exists(role):

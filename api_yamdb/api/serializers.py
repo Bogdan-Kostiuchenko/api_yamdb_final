@@ -1,9 +1,10 @@
-from django.db.models import Avg
 from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title, Review, Comment
 from users.models import YamdbUser
-import users.validators as uservalid
+from users.validators import (
+    validate_username, validate_email, check_role_exists
+)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -26,7 +27,9 @@ class TitleSerializer(serializers.ModelSerializer):
     rating = serializers.IntegerField(read_only=True)
 
     class Meta:
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
         model = Title
 
 
@@ -43,7 +46,7 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
         model = Title
 
 
@@ -98,13 +101,13 @@ class SignUpSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'role')
 
     def validate(self, data):
-        uservalid.validate_username(data['username'])
+        validate_username(data['username'])
 
         if 'email' in data:
-            uservalid.validate_email(data['email'])
+            validate_email(data['email'])
 
         if 'role' in data:
-            uservalid.check_role_exists(data['role'])
+            check_role_exists(data['role'])
         return data
 
 
@@ -125,11 +128,11 @@ class YamdbUserSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if 'username' in data:
-            uservalid.validate_username(data['username'])
+            validate_username(data['username'])
         if 'email' in data:
-            uservalid.validate_email(data['email'])
+            validate_email(data['email'])
         if 'role' in data:
-            uservalid.check_role_exists(data['role'])
+            check_role_exists(data['role'])
         return data
 
 
@@ -149,7 +152,7 @@ class YamdbUserSerializerWithoutRole(serializers.ModelSerializer):
 
     def validate(self, data):
         if 'username' in data:
-            uservalid.validate_username(data['username'])
+            validate_username(data['username'])
         if 'email' in data:
-            uservalid.validate_email(data['email'])
+            validate_email(data['email'])
         return data
