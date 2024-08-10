@@ -12,9 +12,7 @@ class YamdbUser(AbstractUser):
 
     username = models.SlugField('username пользователя',
                                 max_length=NAME_MAX_LENGTH,
-                                validators=(MaxLengthValidator,
-                                            validate_username),
-                                blank=False,
+                                validators=(validate_username),
                                 unique=True)
     first_name = models.CharField('Имя пользователя',
                                   max_length=NAME_MAX_LENGTH,
@@ -23,8 +21,7 @@ class YamdbUser(AbstractUser):
                                  max_length=NAME_MAX_LENGTH,
                                  blank=True,)
     email = models.EmailField('Электронная почта',
-                              validators=(MaxLengthValidator,
-                                          validate_email),
+                              validators=(validate_email),
                               unique=True,
                               max_length=EMAIL_MAX_LENGTH)
     bio = models.TextField('Биография', blank=True)
@@ -52,4 +49,4 @@ class YamdbUser(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
-        return self.username
+        return self.username[:50]
