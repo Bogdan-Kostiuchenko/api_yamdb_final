@@ -119,13 +119,12 @@ class YamdbUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = YamdbUser
         # fields = '__all__'
-        fields = ('username', 
-                  'email', 
-                  'first_name', 
-                  'last_name', 
-                  'bio', 
-                  'role') 
-
+        fields = ('username',
+                  'email',
+                  'first_name',
+                  'last_name',
+                  'bio',
+                  'role')
 
     def validate(self, data):
         if 'username' in data:
