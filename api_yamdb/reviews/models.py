@@ -1,7 +1,8 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils import timezone
 
-from reviews.constans import MIN_SCORE, MAX_SCORE
+from reviews.constans import MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB
 from users.models import YamdbUser
 
 
@@ -35,7 +36,13 @@ class Genre(NameSlugMixin):
 
 class Title(models.Model):
     name = models.CharField(max_length=256)
-    year = models.IntegerField()
+    year = models.IntegerField(
+        validators=[
+            MinValueValidator(MIN_YEAR_PUB),
+            MaxValueValidator(timezone.now().year)
+        ],
+        verbose_name='год выпуска'
+    )
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(
         Category,
@@ -54,7 +61,7 @@ class Title(models.Model):
         verbose_name_plural = 'Произведения'
 
     def __str__(self):
-        return self.name
+        return self.text[:20]
 
 
 class ReviewCommentModel(models.Model):

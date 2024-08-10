@@ -53,13 +53,17 @@ pip install -r requirements.txt
 ```
 python3 manage.py migrate
 ```
+Загрузите тестовые данные:
+```
+python manage.py load_csv_data
+```
 Запустить проект:
 ```
 python3 manage.py runserver
 ```
 
 ## Документация
-Когда вы запустите проект, по адресу http://127.0.0.1:8000/redoc/ будет доступна документация для API Yatube. В документации описано, как должен работать API. Документация представлена в формате Redoc.
+Когда вы запустите проект, [документация для API Yatube](http://127.0.0.1:8000/redoc/) будет доступна по адресу http://127.0.0.1:8000/redoc/. В документации описано, как должен работать API. Документация представлена в формате Redoc.
 
 ## Примеры запросов:
 Получение списка всех категорий
@@ -103,6 +107,6 @@ POST http://127.0.0.1:8000/api/v1/titles/{title_id}/reviews/{review_id}/comments
 
 ## Об авторах
 
-Молодцова Светлана Павловна(https://github.com/SMolodtsova13)  
-Асалиев Ислам(https://github.com/Izyapa)  
-Костюченко Богдан(https://github.com/Bogdan-Kostiuchenko)  
+[Молодцова Светлана Павловна](https://github.com/SMolodtsova13)
+[Асалиев Ислам](https://github.com/Izyapa)
+[Костюченко Богдан](https://github.com/Bogdan-Kostiuchenko)
