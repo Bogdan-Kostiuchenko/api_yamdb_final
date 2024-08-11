@@ -1,20 +1,23 @@
+from http.client import BAD_REQUEST, OK
+
+from django.http import Http404
+from django.db.models import Avg, Q
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, viewsets, mixins
-from rest_framework.decorators import action
+
+from rest_framework import filters, permissions, viewsets, status, mixins
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
-from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
-                                        AllowAny,
-                                        IsAuthenticated)
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
 from api.permissions import (
-    IsAdminOrReadOnly, IsAdminOrSuper, IsAuthorOrAdminOrModerator
+    IsAdminOrReadOnly, IsAdmin, IsAuthorOrAdminOrModerator
 )
 from api.serializers import (
     CategorySerializer, GenreSerializer, TitleSerializer, ReviewSerializer,
@@ -22,29 +25,8 @@ from api.serializers import (
     YamdbUserSerializer, YamdbUserSerializerWithoutRole,
     TitleCreateUpdateSerializer
 )
-from reviews.models import Category, Genre, Title, Review, Comment
-from reviews.constans import EMAIL_ADMIN
-from users.models import YamdbUser
-
-
-def check_users(username, email):
-    try:
-        YamdbUser.objects.get(email=email)
-    except YamdbUser.DoesNotExist:
-        pass
-    else:
-        return Response({'detail': f'Email {email} уже есть'},
-                        status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        YamdbUser.objects.get(username=username)
-    except YamdbUser.DoesNotExist:
-        pass
-    else:
-        return Response({'detail': 'Username {username} уже есть'},
-                        status=status.HTTP_400_BAD_REQUEST)
-
-    return None
+from reviews.models import Category, Genre, Title, Review, Comment, YamdbUser
+from reviews.constans import EMAIL_ADMIN, RESERVE_USERNAME
 
 
 class CategoryGenreMixinViewSet(
@@ -114,104 +96,83 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, review=self.get_review())
 
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def singup(request):
+    serializer = SignUpSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    username = request.data['username']
+    email = request.data['email']
 
-class SignUpView(APIView):
+    try:
+        user = get_object_or_404(YamdbUser,
+                                 email=email,
+                                 username=username)
+    except Http404:
+        try:
+            YamdbUser.objects.get(email=email)
+        except YamdbUser.DoesNotExist:
+            pass
+        else:
+            return Response({'detail': f'Email {email} уже есть'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            YamdbUser.objects.get(username=username)
+        except YamdbUser.DoesNotExist:
+            pass
+        else:
+            return Response({'detail': 'Username {username} уже есть'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        user = get_object_or_404(YamdbUser,
+                                 username=username)
 
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        serializer = SignUpSerializer(data=request.data)
-        if serializer.is_valid():
-            email = request.data.get('email')
-            username = request.data.get('username')
-
-            if YamdbUser.objects.filter(email=email,
-                                        username=username).exists():
-                return Response({'detail': 'Пользователь уже зарегистрирован'},
-                                status=status.HTTP_200_OK)
-
-            checking = check_users(username, email)
-            if checking is not None:
-                return checking
-
-            serializer.save()
-            user = YamdbUser.objects.get(
-                username=username,
-                email=email
-            )
-            confirmation_code = default_token_generator.make_token(user)
-            send_mail('Код подтверждения регистрации',
-                      f'Ваш код подтвержения: {confirmation_code}',
-                      EMAIL_ADMIN,
-                      [email])
-            return Response(request.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail('Код подтверждения регистрации',
+              f'Ваш код подтвержения: {confirmation_code}',
+              EMAIL_ADMIN,
+              [user.email])
+    return Response(request.data, status=status.HTTP_200_OK)
 
 
-class TokenView(APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        serializer = GetTokenSerializer(data=request.data)
-        if serializer.is_valid():
-            user = get_object_or_404(
-                YamdbUser, username=request.data.get('username')
-            )
-            if not default_token_generator.check_token(
-                user, request.data.get('confirmation_code')
-            ):
-                return Response('Неверный код',
-                                status=status.HTTP_400_BAD_REQUEST)
-            refresh = RefreshToken.for_user(user)
-            token = {'token': str(refresh.access_token)}
-            return Response(token, status=status.HTTP_200_OK)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def token_jwt(request):
+    serializer = GetTokenSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user = get_object_or_404(YamdbUser,
+                             username=serializer.validated_data["username"])
+    if default_token_generator.check_token(
+        user, serializer.validated_data["confirmation_code"]
+    ):
+        token = AccessToken.for_user(user)
+        return Response({"token": str(token)}, status=OK)
+    return Response(serializer.errors, status=BAD_REQUEST)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = YamdbUserSerializer
     queryset = YamdbUser.objects.all()
-    permission_classes = (IsAdminOrReadOnly,
-                          IsAdminOrSuper)
-
+    permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
-
     lookup_field = 'username'
     search_fields = ('username',)
 
     @action(detail=False, methods=['get', 'patch'], url_path='me',
-            url_name='me', permission_classes=(IsAuthenticated,))
+            url_name=RESERVE_USERNAME, permission_classes=(IsAuthenticated,))
     def get_update(self, request):
-        serializer = YamdbUserSerializer(request.user)
+        serializer = YamdbUserSerializer(request.user,
+                                         data=request.data,
+                                         partial=True)
         if request.method == 'PATCH':
-            serializer = None
-            if 'role' in request.data:
-                serializer = YamdbUserSerializerWithoutRole(
-                    request.user, data=request.data, partial=True
-                )
-            else:
-                serializer = YamdbUserSerializer(
-                    request.user, data=request.data, partial=True
-                )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer = YamdbUserSerializerWithoutRole(request.user,
+                                                        data=request.data,
+                                                        partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        email = request.data.get('email')
-        username = request.data.get('username')
-        checking = check_users(username, email)
-        if checking is not None:
-            return checking
-
-        serializer = YamdbUserSerializerWithoutRole(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(request.data, status=status.HTTP_201_CREATED)
-        return Response(request.data, status=status.HTTP_400_BAD_REQUEST)

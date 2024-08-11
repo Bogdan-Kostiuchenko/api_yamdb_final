@@ -16,3 +16,5 @@ USERS_ROLES = [(USER, 'Пользователь'),
 
 ROLES = (ADMIN, MODERATOR, USER)
 EMAIL_ADMIN = 'admin@mail.ru'
+
+RESERVE_USERNAME = 'me'

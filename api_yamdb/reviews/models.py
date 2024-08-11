@@ -1,9 +1,47 @@
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import (MinValueValidator, MaxValueValidator)
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
-from reviews.constans import MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB
-from users.models import YamdbUser
+from reviews.constans import (MIN_SCORE, MAX_SCORE,
+                              MIN_YEAR_PUB, NAME_MAX_LENGTH,
+                              EMAIL_MAX_LENGTH, USERS_ROLES)
+
+
+max_length = max([len(role) for role, _ in USERS_ROLES])
+
+
+class YamdbUser(AbstractUser):
+
+    username = models.SlugField('Никнейм пользователя',
+                                max_length=NAME_MAX_LENGTH,
+                                unique=True)
+    first_name = models.CharField('Имя пользователя',
+                                  max_length=NAME_MAX_LENGTH,
+                                  blank=True,)
+    last_name = models.CharField('Фамилия',
+                                 max_length=NAME_MAX_LENGTH,
+                                 blank=True,)
+    email = models.EmailField('Электронная почта',
+                              unique=True,
+                              max_length=EMAIL_MAX_LENGTH)
+    bio = models.TextField('Биография', blank=True)
+    confirmation_code = models.CharField('Код рeгистрации',
+                                         max_length=NAME_MAX_LENGTH,
+                                         blank=True)
+    role = models.CharField('Роль пользователя',
+                            choices=USERS_ROLES,
+                            max_length=max_length,
+                            blank=False,
+                            default=USERS_ROLES[0][0])
+
+    class Meta:
+        ordering = ('username',)
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+
+    def __str__(self):
+        return self.username[:50]
 
 
 class NameSlug(models.Model):

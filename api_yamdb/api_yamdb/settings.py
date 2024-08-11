@@ -22,8 +22,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'reviews',
     'api',
-    'users.apps.UsersConfig',
-    'django_filters'
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -95,7 +94,7 @@ STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = 'users.YamdbUser'
+AUTH_USER_MODEL = 'reviews.YamdbUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
