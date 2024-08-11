@@ -53,9 +53,21 @@ pip install -r requirements.txt
 ```
 python3 manage.py migrate
 ```
-Загрузите тестовые данные:
+Перейти в директорию с db.sqlite3 и подключиться к ней:
 ```
-python manage.py load_csv_data
+sqlite3 db.sqlite3
+```
+Загрузить тестовые данные:
+```
+.mode csv
+.separator ","
+.import static/data/category.csv api_genre
+.import static/data/comments.csv api_genre
+.import static/data/genre_title.csv api_genre
+.import static/data/genre.csv api_genre
+.import static/data/review.csv api_genre
+.import static/data/titles.csv api_genre
+.import static/data/users.csv api_genre
 ```
 Запустить проект:
 ```
