@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from reviews.constans import USERS_ROLES, NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
+from reviews.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
 from reviews.models import Category, Genre, Title, Review, Comment, YamdbUser
 from reviews import validators
 

@@ -1,7 +1,7 @@
 from http.client import BAD_REQUEST, OK
 
 from django.http import Http404
-from django.db.models import Avg, Q
+from django.db.models import Avg
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -25,7 +25,7 @@ from api.serializers import (
     YamdbUserSerializer, YamdbUserSerializerWithoutRole,
     TitleCreateUpdateSerializer
 )
-from reviews.models import Category, Genre, Title, Review, Comment, YamdbUser
+from reviews.models import Category, Genre, Title, Review, YamdbUser
 from reviews.constans import EMAIL_ADMIN, RESERVE_USERNAME
 
 
@@ -95,6 +95,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, review=self.get_review())
+
 
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
