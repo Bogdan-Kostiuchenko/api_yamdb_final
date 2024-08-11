@@ -6,13 +6,13 @@ MIN_YEAR_PUB = 1800
 
 EMAIL_MAX_LENGTH = 254
 
-USER_ROLE_USER = 'user'
-USER_ROLE_MODERATOR = 'moderator'
-USER_ROLE_ADMIN = 'admin'
+USER = 'user'
+MODERATOR = 'moderator'
+ADMIN = 'admin'
 
-USERS_ROLES = [(USER_ROLE_USER, 'Пользователь'),
-               (USER_ROLE_MODERATOR, 'Модератор'),
-               (USER_ROLE_ADMIN, 'Администратор')]
+USERS_ROLES = [(USER, 'Пользователь'),
+               (MODERATOR, 'Модератор'),
+               (ADMIN, 'Администратор')]
 
-ROLES = (USER_ROLE_ADMIN, USER_ROLE_MODERATOR, USER_ROLE_USER)
+ROLES = (ADMIN, MODERATOR, USER)
 EMAIL_ADMIN = 'admin@mail.ru'

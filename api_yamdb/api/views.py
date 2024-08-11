@@ -68,63 +68,51 @@ class GenreViewSet(CategoryGenreMixinViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.all().annotate(
+        rating=Avg('reviews__score')
+    ).order_by(*Title._meta.ordering)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
     serializer_class = TitleSerializer
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update'):
             return TitleCreateUpdateSerializer
         return TitleSerializer
 
-    def update(self, request, *args, **kwargs):
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().update(request, *args, **kwargs)
-
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,
                           IsAuthorOrAdminOrModerator)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs['title_id'])
 
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs['title_id'])
-        return Review.objects.filter(title=title)
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        serializer.save(
-            author=self.request.user,
-            title=get_object_or_404(Title, id=self.kwargs['title_id'])
-        )
-
-    def update(self, request, *args, **kwargs):
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().update(request, *args, **kwargs)
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,
                           IsAuthorOrAdminOrModerator)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+
+    def get_review(self):
+        return get_object_or_404(Review, id=self.kwargs['review_id'])
 
     def get_queryset(self):
-        review_id = self.kwargs['review_id']
-        return Comment.objects.filter(review_id=review_id)
+        return self.get_review().comments.all()
 
     def perform_create(self, serializer):
-        serializer.save(
-            author=self.request.user,
-            review=get_object_or_404(Review, id=self.kwargs['review_id'])
-        )
-
-    def update(self, request, *args, **kwargs):
-        if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().update(request, *args, **kwargs)
+        serializer.save(author=self.request.user, review=self.get_review())
 
 
 class SignUpView(APIView):

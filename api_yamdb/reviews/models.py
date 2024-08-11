@@ -6,30 +6,32 @@ from reviews.constans import MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB
 from users.models import YamdbUser
 
 
-class NameSlugMixin(models.Model):
+class NameSlug(models.Model):
     name = models.CharField(max_length=256, verbose_name='имя')
-    slug = models.SlugField(max_length=50, verbose_name='слаг', unique=True)
+    slug = models.SlugField(
+        max_length=50, verbose_name='уникальный идентификатор', unique=True
+    )
 
     class Meta:
         abstract = True
         ordering = ('name',)
-        verbose_name = 'имя и слаг'
-        verbose_name_plural = 'Имена и слаги'
+        verbose_name = 'имя и уникальный идентификатор'
+        verbose_name_plural = 'Имена и уникальные идентификаторы'
 
     def __str__(self):
         return self.name
 
 
-class Category(NameSlugMixin):
+class Category(NameSlug):
 
-    class Meta:
+    class Meta(NameSlug.Meta):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(NameSlugMixin):
+class Genre(NameSlug):
 
-    class Meta:
+    class Meta(NameSlug.Meta):
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
 
@@ -64,7 +66,7 @@ class Title(models.Model):
         return self.text[:20]
 
 
-class ReviewCommentModel(models.Model):
+class TextAuthorPubDate(models.Model):
     text = models.TextField(verbose_name='текст')
     author = models.ForeignKey(
         YamdbUser, on_delete=models.CASCADE, related_name='%(class)ss',
@@ -76,13 +78,13 @@ class ReviewCommentModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('pub_date',)
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.text[:20]
 
 
-class Review(ReviewCommentModel):
+class Review(TextAuthorPubDate):
     title = models.ForeignKey(
         Title, on_delete=models.CASCADE, related_name='reviews',
         verbose_name='произведение'
@@ -92,7 +94,7 @@ class Review(ReviewCommentModel):
         validators=[MinValueValidator(MIN_SCORE), MaxValueValidator(MAX_SCORE)]
     )
 
-    class Meta:
+    class Meta(TextAuthorPubDate.Meta):
         verbose_name = 'отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -103,12 +105,12 @@ class Review(ReviewCommentModel):
         )
 
 
-class Comment(ReviewCommentModel):
+class Comment(TextAuthorPubDate):
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE, related_name='comments',
         verbose_name='отзыв'
     )
 
-    class Meta:
+    class Meta(TextAuthorPubDate.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
