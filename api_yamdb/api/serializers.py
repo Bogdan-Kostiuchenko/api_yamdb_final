@@ -1,10 +1,8 @@
 from rest_framework import serializers
 
-from reviews.models import Category, Genre, Title, Review, Comment
-from users.models import YamdbUser
-from users.validators import (
-    validate_username, validate_email, check_role_exists
-)
+from reviews.constans import USERS_ROLES, NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
+from reviews.models import Category, Genre, Title, Review, Comment, YamdbUser
+from reviews import validators
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -84,41 +82,32 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class GetTokenSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    confirmation_code = serializers.CharField()
+    username = serializers.CharField(max_length=100,
+                                     required=True)
+    confirmation_code = serializers.CharField(max_length=100,
+                                              required=True)
 
-    class Meta:
-        model = YamdbUser
-        fields = ('username', 'confirmation_code')
+    def validate_username(self, value):
+        return validators.validate_username(value)
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    username = serializers.CharField()
-    email = serializers.EmailField()
+    username = serializers.CharField(max_length=NAME_MAX_LENGTH, required=True)
+    email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH, required=True)
 
     class Meta:
         model = YamdbUser
-        fields = ('username', 'email', 'role')
+        fields = ('username', 'email')
 
-    def validate(self, data):
-        validate_username(data['username'])
-
-        if 'email' in data:
-            validate_email(data['email'])
-
-        if 'role' in data:
-            check_role_exists(data['role'])
-        return data
+    def validate_username(self, value):
+        return validators.validate_username(value)
 
 
 class YamdbUserSerializer(serializers.ModelSerializer):
     """Сериализатор пользователей."""
-    username = serializers.CharField(required=True)
-    email = serializers.CharField(required=True)
 
     class Meta:
         model = YamdbUser
-        # fields = '__all__'
         fields = ('username',
                   'email',
                   'first_name',
@@ -126,33 +115,14 @@ class YamdbUserSerializer(serializers.ModelSerializer):
                   'bio',
                   'role')
 
-    def validate(self, data):
-        if 'username' in data:
-            validate_username(data['username'])
-        if 'email' in data:
-            validate_email(data['email'])
-        if 'role' in data:
-            check_role_exists(data['role'])
-        return data
+    def validate_username(self, value):
+        return validators.validate_username(value)
 
 
-class YamdbUserSerializerWithoutRole(serializers.ModelSerializer):
+class YamdbUserSerializerWithoutRole(YamdbUserSerializer):
     """Сериализатор пользователей."""
-    username = serializers.CharField(required=True)
-    email = serializers.CharField(required=True)
 
     class Meta:
         model = YamdbUser
-        ordering = ['username']
-        fields = ('username',
-                  'email',
-                  'first_name',
-                  'last_name',
-                  'bio')
-
-    def validate(self, data):
-        if 'username' in data:
-            validate_username(data['username'])
-        if 'email' in data:
-            validate_email(data['email'])
-        return data
+        ordering = ('username',)
+        fields = ('username', 'email', 'first_name', 'last_name', 'bio')
