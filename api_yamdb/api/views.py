@@ -148,19 +148,27 @@ class UsersViewSet(viewsets.ModelViewSet):
     lookup_field = 'username'
     search_fields = ('username',)
 
-    @action(detail=False, methods=['get', 'patch'], url_path='me',
+    @action(detail=False, methods=['patch'], url_path='me',
             url_name=RESERVE_USERNAME, permission_classes=(IsAuthenticated,))
-    def get_update(self, request):
+    def patch(self, request):
+        # Использование partial позволяет сериализовать только те данные,
+        # которые были переданы в request.data,
+        # и игнорировать все остальные поля объекта.
+        serializer = YamdbUserSerializerWithoutRole(request.user,
+                                                    data=request.data,
+                                                    partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='me',
+            url_name=RESERVE_USERNAME, permission_classes=(IsAuthenticated,))
+    def get(self, request):
         serializer = YamdbUserSerializer(request.user,
                                          data=request.data,
                                          partial=True)
-        if request.method == 'PATCH':
-            serializer = YamdbUserSerializerWithoutRole(request.user,
-                                                        data=request.data,
-                                                        partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
