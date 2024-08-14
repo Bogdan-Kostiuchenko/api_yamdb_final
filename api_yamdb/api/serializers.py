@@ -1,8 +1,11 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from reviews.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
-from reviews.models import Category, Genre, Title, Review, Comment, YamdbUser
+from reviews.models import Category, Genre, Title, Review, Comment
 from reviews import validators
+
+User = get_user_model()
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -86,33 +89,32 @@ class CommentSerializer(BaseReviewCommentSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
 
 
-class GetTokenSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=100,
-                                     required=True)
-    confirmation_code = serializers.CharField(max_length=100,
-                                              required=True)
+class ValidationMixin:
 
     def validate_username(self, value):
         return validators.validate_username(value)
 
 
-class SignUpSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=NAME_MAX_LENGTH, required=True)
-    email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH, required=True)
+class GetTokenSerializer(serializers.Serializer, ValidationMixin):
+    username = serializers.CharField(max_length=100)
+    confirmation_code = serializers.CharField(max_length=100)
+
+
+class SignUpSerializer(serializers.ModelSerializer, ValidationMixin):
+    username = serializers.CharField(max_length=NAME_MAX_LENGTH)
+    email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
 
     class Meta:
-        model = YamdbUser
+        model = User
+    #     fields = '__all__'
         fields = ('username', 'email')
 
-    def validate_username(self, value):
-        return validators.validate_username(value)
 
-
-class YamdbUserSerializer(serializers.ModelSerializer):
+class YamdbUserSerializer(serializers.ModelSerializer, ValidationMixin):
     """Сериализатор пользователей."""
 
     class Meta:
-        model = YamdbUser
+        model = User
         fields = ('username',
                   'email',
                   'first_name',
@@ -120,14 +122,11 @@ class YamdbUserSerializer(serializers.ModelSerializer):
                   'bio',
                   'role')
 
-    def validate_username(self, value):
-        return validators.validate_username(value)
-
 
 class YamdbUserSerializerWithoutRole(YamdbUserSerializer):
     """Сериализатор пользователей."""
 
     class Meta:
-        model = YamdbUser
+        model = User
         ordering = ('username',)
-        fields = ('username', 'email', 'first_name', 'last_name', 'bio')
+        exclude = ('role',)

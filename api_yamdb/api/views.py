@@ -2,6 +2,7 @@ from http.client import BAD_REQUEST, OK
 
 from django.http import Http404
 from django.db.models import Avg
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -26,7 +27,9 @@ from api.serializers import (
     TitleCreateUpdateSerializer
 )
 from reviews.constans import EMAIL_ADMIN, RESERVE_USERNAME
-from reviews.models import Category, Genre, Title, Review, YamdbUser
+from reviews.models import Category, Genre, Title, Review
+
+User = get_user_model()
 
 
 class CategoryGenreMixinViewSet(
@@ -102,7 +105,7 @@ class CommentViewSet(TitleReviewCommentMixinViewSet):
         serializer.save(author=self.request.user, review=self.get_review())
 
 
-@api_view(["POST"])
+@api_view(('POST',))
 @permission_classes([permissions.AllowAny])
 def singup(request):
     serializer = SignUpSerializer(data=request.data)
@@ -111,26 +114,26 @@ def singup(request):
     email = request.data['email']
 
     try:
-        user = get_object_or_404(YamdbUser,
+        user = get_object_or_404(User,
                                  email=email,
                                  username=username)
     except Http404:
         try:
-            YamdbUser.objects.get(email=email)
-        except YamdbUser.DoesNotExist:
+            User.objects.get(email=email)
+        except User.DoesNotExist:
             pass
         else:
             return Response({'detail': f'Email {email} уже есть'},
                             status=status.HTTP_400_BAD_REQUEST)
         try:
-            YamdbUser.objects.get(username=username)
-        except YamdbUser.DoesNotExist:
+            User.objects.get(username=username)
+        except User.DoesNotExist:
             pass
         else:
             return Response({'detail': 'Username {username} уже есть'},
                             status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
-        user = get_object_or_404(YamdbUser,
+        user = get_object_or_404(User,
                                  username=username)
 
     confirmation_code = default_token_generator.make_token(user)
@@ -141,12 +144,12 @@ def singup(request):
     return Response(request.data, status=status.HTTP_200_OK)
 
 
-@api_view(["POST"])
+@api_view(('POST',))
 @permission_classes([permissions.AllowAny])
 def token_jwt(request):
     serializer = GetTokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    user = get_object_or_404(YamdbUser,
+    user = get_object_or_404(User,
                              username=serializer.validated_data["username"])
     if default_token_generator.check_token(
         user, serializer.validated_data["confirmation_code"]
@@ -158,7 +161,7 @@ def token_jwt(request):
 
 class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = YamdbUserSerializer
-    queryset = YamdbUser.objects.all()
+    queryset = User.objects.all()
     permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
     lookup_field = 'username'
