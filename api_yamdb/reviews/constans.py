@@ -8,6 +8,4 @@ MIN_SCORE = 1
 MAX_SCORE = 10
 MIN_YEAR_PUB = -32768  # Нижняя граница SmallIntegerField
 
-EMAIL_ADMIN = 'admin@mail.ru'
-
 RESERVE_USERNAME = 'me'
