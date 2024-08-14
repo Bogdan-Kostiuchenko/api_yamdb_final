@@ -13,8 +13,8 @@ class IsAdmin(BasePermission):
 class IsAdminOrReadOnly(IsAdmin):
 
     def has_permission(self, request, view):
-        return (super().has_permission(request, view) or
-                request.method in SAFE_METHODS)
+        return (super().has_permission(request, view)
+                or request.method in SAFE_METHODS)
 
 
 class IsAuthorOrAdminOrModerator(IsAuthenticatedOrReadOnly):

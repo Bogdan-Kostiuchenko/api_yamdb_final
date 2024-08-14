@@ -60,9 +60,9 @@ class YamdbUser(AbstractUser):
 
     @property
     def is_admin(self):
-        return (self.is_superuser or
-                self.is_staff or
-                self.role == UserRoles.ADMINISTRATOR.value)
+        return (self.is_superuser
+                or self.is_staff
+                or self.role == UserRoles.ADMINISTRATOR.value)
 
     @property
     def is_moderator(self):
