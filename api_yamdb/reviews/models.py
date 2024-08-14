@@ -1,14 +1,22 @@
-from django.core.validators import (MinValueValidator, MaxValueValidator)
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
-from reviews.constans import (MIN_SCORE, MAX_SCORE,
-                              MIN_YEAR_PUB, NAME_MAX_LENGTH,
-                              EMAIL_MAX_LENGTH, USERS_ROLES)
+from reviews.constans import (
+    MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB, NAME_MAX_LENGTH, EMAIL_MAX_LENGTH,
+    USERS_ROLES, CHAR_FIELD_MAX_LENGTH, SLUG_FIELD_MAX_LENGTH
+)
 
 
 max_length = max([len(role) for role, _ in USERS_ROLES])
+
+
+def validate_max_year(value):
+    current_year = timezone.now().year
+    if value > current_year:
+        raise ValidationError(f'Год не может быть больше {current_year}.')
 
 
 class YamdbUser(AbstractUser):
@@ -45,16 +53,19 @@ class YamdbUser(AbstractUser):
 
 
 class NameSlug(models.Model):
-    name = models.CharField(max_length=256, verbose_name='имя')
+    name = models.CharField(
+        max_length=CHAR_FIELD_MAX_LENGTH, verbose_name='имя'
+    )
     slug = models.SlugField(
-        max_length=50, verbose_name='уникальный идентификатор', unique=True
+        max_length=SLUG_FIELD_MAX_LENGTH, verbose_name='идентификатор',
+        unique=True
     )
 
     class Meta:
         abstract = True
         ordering = ('name',)
-        verbose_name = 'имя и уникальный идентификатор'
-        verbose_name_plural = 'Имена и уникальные идентификаторы'
+        verbose_name = 'имя и идентификатор'
+        verbose_name_plural = 'Имена и идентификаторы'
 
     def __str__(self):
         return self.name
@@ -75,15 +86,15 @@ class Genre(NameSlug):
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=256)
-    year = models.IntegerField(
-        validators=[
-            MinValueValidator(MIN_YEAR_PUB),
-            MaxValueValidator(timezone.now().year)
-        ],
+    name = models.CharField(max_length=CHAR_FIELD_MAX_LENGTH)
+    year = models.SmallIntegerField(
+        validators=[MinValueValidator(
+            MIN_YEAR_PUB,
+            message=f'Год выпуска не может быть раньше {MIN_YEAR_PUB}'
+        ), validate_max_year],
         verbose_name='год выпуска'
     )
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, default='')
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -111,7 +122,7 @@ class TextAuthorPubDate(models.Model):
         verbose_name='автор'
     )
     pub_date = models.DateTimeField(
-        verbose_name='время публикации', auto_now_add=True
+        verbose_name='время публикации', auto_now_add=True, db_index=True
     )
 
     class Meta:
@@ -127,7 +138,7 @@ class Review(TextAuthorPubDate):
         Title, on_delete=models.CASCADE, related_name='reviews',
         verbose_name='произведение'
     )
-    score = models.PositiveIntegerField(
+    score = models.PositiveSmallIntegerField(
         verbose_name='оценка произведения',
         validators=[MinValueValidator(MIN_SCORE), MaxValueValidator(MAX_SCORE)]
     )
@@ -137,7 +148,7 @@ class Review(TextAuthorPubDate):
         verbose_name_plural = 'Отзывы'
         constraints = (
             models.UniqueConstraint(
-                fields=['title', 'author'],
+                fields=('title', 'author'),
                 name='unique_title_author'
             ),
         )

@@ -14,10 +14,9 @@ class TitleFilter(FilterSet):
         lookup_expr='icontains'
     )
     name = filters.CharFilter(
-        field_name='name',
         lookup_expr='icontains'
     )
 
     class Meta:
         model = Title
-        fields = ['name', 'year', 'category', 'genre']
+        fields = ('name', 'year', 'category', 'genre')

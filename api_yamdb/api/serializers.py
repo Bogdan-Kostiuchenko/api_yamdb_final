@@ -20,7 +20,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class TitleSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(many=False)
+    category = CategorySerializer()
     genre = GenreSerializer(many=True)
     rating = serializers.IntegerField(read_only=True)
 
@@ -41,7 +41,8 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         many=True,
         queryset=Genre.objects.all(),
-        slug_field='slug'
+        slug_field='slug',
+        allow_empty=False
     )
 
     class Meta:
@@ -49,10 +50,16 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
         model = Title
 
 
-class ReviewSerializer(serializers.ModelSerializer):
+class BaseReviewCommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         slug_field='username', read_only=True
     )
+
+    class Meta:
+        abstract = True
+
+
+class ReviewSerializer(BaseReviewCommentSerializer):
 
     class Meta:
         model = Review
@@ -64,7 +71,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             return data
         title_id = self.context['view'].kwargs.get('title_id')
         if Review.objects.filter(
-            title_id=title_id, author=request.user
+            title__id=title_id, author=request.user
         ).exists():
             raise serializers.ValidationError(
                 'Вы уже оставляли отзыв о данном произведении.'
@@ -72,10 +79,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         return data
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        slug_field='username', read_only=True
-    )
+class CommentSerializer(BaseReviewCommentSerializer):
 
     class Meta:
         model = Comment
