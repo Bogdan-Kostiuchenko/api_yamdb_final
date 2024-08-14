@@ -19,3 +19,6 @@ class YamdbUserAdmin(admin.ModelAdmin):
                     'pk')
     list_editable = ('role',)
     search_fields = ('username', 'role',)
+
+
+admin.site.unregister(YamdbUser)

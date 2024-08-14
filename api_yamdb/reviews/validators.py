@@ -12,8 +12,9 @@ def validate_username(username):
         raise ValidationError(
             f'Запрещено использовать username - {RESERVE_USERNAME}!'
         )
-    if re.search(pattern, username):
-        return username
-    else:
+
+    if not re.match(pattern, username):
+        forbidden_characters = re.findall(pattern, username)
         raise ValidationError(f'Логин содержит недопустимые символы: '
-                              f'{re.findall(pattern, username)}')
+                              f'{forbidden_characters}')
+    return username

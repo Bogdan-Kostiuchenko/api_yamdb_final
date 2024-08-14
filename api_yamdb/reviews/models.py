@@ -10,7 +10,7 @@ from reviews.constans import (
 )
 
 
-max_length = max([len(role) for role, _ in USERS_ROLES])
+max_length = max(len(role) for role, _ in USERS_ROLES)
 
 
 def validate_max_year(value):
@@ -40,7 +40,6 @@ class YamdbUser(AbstractUser):
     role = models.CharField('Роль пользователя',
                             choices=USERS_ROLES,
                             max_length=max_length,
-                            blank=False,
                             default=USERS_ROLES[0][0])
 
     class Meta:

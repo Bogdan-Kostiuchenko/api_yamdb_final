@@ -13,9 +13,9 @@ USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
 
-USERS_ROLES = [(USER, 'Пользователь'),
+USERS_ROLES = ((USER, 'Пользователь'),
                (MODERATOR, 'Модератор'),
-               (ADMIN, 'Администратор')]
+               (ADMIN, 'Администратор'))
 
 ROLES = (ADMIN, MODERATOR, USER)
 EMAIL_ADMIN = 'admin@mail.ru'
