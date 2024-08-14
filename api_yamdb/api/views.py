@@ -1,7 +1,7 @@
 from http.client import BAD_REQUEST, OK
 
-from django.http import Http404
 from django.db.models import Avg
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -15,6 +15,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+from api_yamdb.settings import DOMAIN_NAME
 from api.filters import TitleFilter
 from api.permissions import (
     IsAdminOrReadOnly, IsAdmin, IsAuthorOrAdminOrModerator
@@ -25,8 +26,10 @@ from api.serializers import (
     YamdbUserSerializer, YamdbUserSerializerWithoutRole,
     TitleCreateUpdateSerializer
 )
-from reviews.constans import EMAIL_ADMIN, RESERVE_USERNAME
-from reviews.models import Category, Genre, Title, Review, YamdbUser
+from reviews.constans import RESERVE_USERNAME
+from reviews.models import Category, Genre, Title, Review
+
+User = get_user_model()
 
 
 class CategoryGenreMixinViewSet(
@@ -102,51 +105,32 @@ class CommentViewSet(TitleReviewCommentMixinViewSet):
         serializer.save(author=self.request.user, review=self.get_review())
 
 
-@api_view(["POST"])
+@api_view(('POST',))
 @permission_classes([permissions.AllowAny])
 def singup(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+
     username = request.data['username']
     email = request.data['email']
-
-    try:
-        user = get_object_or_404(YamdbUser,
-                                 email=email,
-                                 username=username)
-    except Http404:
-        try:
-            YamdbUser.objects.get(email=email)
-        except YamdbUser.DoesNotExist:
-            pass
-        else:
-            return Response({'detail': f'Email {email} уже есть'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        try:
-            YamdbUser.objects.get(username=username)
-        except YamdbUser.DoesNotExist:
-            pass
-        else:
-            return Response({'detail': 'Username {username} уже есть'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        user = get_object_or_404(YamdbUser,
-                                 username=username)
+    user, is_created = User.objects.get_or_create(username=username,
+                                                  email=email)
 
     confirmation_code = default_token_generator.make_token(user)
     send_mail('Код подтверждения регистрации',
               f'Ваш код подтвержения: {confirmation_code}',
-              EMAIL_ADMIN,
-              [user.email])
+              f'admin@{DOMAIN_NAME}',
+              [user.email],
+              fail_silently=False)
     return Response(request.data, status=status.HTTP_200_OK)
 
 
-@api_view(["POST"])
+@api_view(('POST',))
 @permission_classes([permissions.AllowAny])
 def token_jwt(request):
     serializer = GetTokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    user = get_object_or_404(YamdbUser,
+    user = get_object_or_404(User,
                              username=serializer.validated_data["username"])
     if default_token_generator.check_token(
         user, serializer.validated_data["confirmation_code"]
@@ -158,25 +142,33 @@ def token_jwt(request):
 
 class UsersViewSet(viewsets.ModelViewSet):
     serializer_class = YamdbUserSerializer
-    queryset = YamdbUser.objects.all()
+    queryset = User.objects.all()
     permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
     lookup_field = 'username'
     search_fields = ('username',)
 
-    @action(detail=False, methods=['get', 'patch'], url_path='me',
+    @action(detail=False, methods=['patch'], url_path='me',
             url_name=RESERVE_USERNAME, permission_classes=(IsAuthenticated,))
-    def get_update(self, request):
+    def patch(self, request):
+        # Использование partial позволяет сериализовать только те данные,
+        # которые были переданы в request.data,
+        # и игнорировать все остальные поля объекта.
+        serializer = YamdbUserSerializerWithoutRole(request.user,
+                                                    data=request.data,
+                                                    partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='me',
+            url_name=RESERVE_USERNAME, permission_classes=(IsAuthenticated,))
+    def get(self, request):
         serializer = YamdbUserSerializer(request.user,
                                          data=request.data,
                                          partial=True)
-        if request.method == 'PATCH':
-            serializer = YamdbUserSerializerWithoutRole(request.user,
-                                                        data=request.data,
-                                                        partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':

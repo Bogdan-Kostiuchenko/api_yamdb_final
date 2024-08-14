@@ -4,19 +4,27 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+
 from reviews.constans import (
-    MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB, NAME_MAX_LENGTH, EMAIL_MAX_LENGTH,
-    USERS_ROLES, CHAR_FIELD_MAX_LENGTH, SLUG_FIELD_MAX_LENGTH
+    MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB, NAME_MAX_LENGTH,
+    EMAIL_MAX_LENGTH, CHAR_FIELD_MAX_LENGTH, SLUG_FIELD_MAX_LENGTH
 )
-
-
-max_length = max([len(role) for role, _ in USERS_ROLES])
 
 
 def validate_max_year(value):
     current_year = timezone.now().year
     if value > current_year:
         raise ValidationError(f'Год не может быть больше {current_year}.')
+
+
+class UserRoles(models.TextChoices):
+
+    USER = 'user', 'Пользователь'
+    MODERATOR = 'moderator', 'Модератор'
+    ADMINISTRATOR = 'admin', 'Администратор'
+
+
+max_length = max(len(role) for role in UserRoles.choices)
 
 
 class YamdbUser(AbstractUser):
@@ -38,10 +46,9 @@ class YamdbUser(AbstractUser):
                                          max_length=NAME_MAX_LENGTH,
                                          blank=True)
     role = models.CharField('Роль пользователя',
-                            choices=USERS_ROLES,
+                            choices=UserRoles.choices,
                             max_length=max_length,
-                            blank=False,
-                            default=USERS_ROLES[0][0])
+                            default=UserRoles.USER)
 
     class Meta:
         ordering = ('username',)
@@ -50,6 +57,16 @@ class YamdbUser(AbstractUser):
 
     def __str__(self):
         return self.username[:50]
+
+    @property
+    def is_admin(self):
+        return (self.is_superuser or
+                self.is_staff or
+                self.role == UserRoles.ADMINISTRATOR.value)
+
+    @property
+    def is_moderator(self):
+        return self.role == UserRoles.MODERATOR.value
 
 
 class NameSlug(models.Model):
