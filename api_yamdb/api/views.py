@@ -1,6 +1,5 @@
 from http.client import BAD_REQUEST, OK
 
-from django.http import Http404
 from django.db.models import Avg
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -16,6 +15,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+from api_yamdb.settings import DOMAIN_NAME
 from api.filters import TitleFilter
 from api.permissions import (
     IsAdminOrReadOnly, IsAdmin, IsAuthorOrAdminOrModerator
@@ -26,7 +26,7 @@ from api.serializers import (
     YamdbUserSerializer, YamdbUserSerializerWithoutRole,
     TitleCreateUpdateSerializer
 )
-from reviews.constans import EMAIL_ADMIN, RESERVE_USERNAME
+from reviews.constans import RESERVE_USERNAME
 from reviews.models import Category, Genre, Title, Review
 
 User = get_user_model()
@@ -110,37 +110,18 @@ class CommentViewSet(TitleReviewCommentMixinViewSet):
 def singup(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+
     username = request.data['username']
     email = request.data['email']
-
-    try:
-        user = get_object_or_404(User,
-                                 email=email,
-                                 username=username)
-    except Http404:
-        try:
-            User.objects.get(email=email)
-        except User.DoesNotExist:
-            pass
-        else:
-            return Response({'detail': f'Email {email} уже есть'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        try:
-            User.objects.get(username=username)
-        except User.DoesNotExist:
-            pass
-        else:
-            return Response({'detail': 'Username {username} уже есть'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        user = get_object_or_404(User,
-                                 username=username)
+    user, is_created = User.objects.get_or_create(username=username,
+                                                  email=email)
 
     confirmation_code = default_token_generator.make_token(user)
     send_mail('Код подтверждения регистрации',
               f'Ваш код подтвержения: {confirmation_code}',
-              EMAIL_ADMIN,
-              [user.email])
+              f'admin@{DOMAIN_NAME}',
+              [user.email],
+              fail_silently=False)
     return Response(request.data, status=status.HTTP_200_OK)
 
 

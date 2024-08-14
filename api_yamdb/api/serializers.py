@@ -1,4 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from django.http import Http404
 from rest_framework import serializers
 
 from reviews.constans import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
@@ -94,20 +97,40 @@ class ValidationMixin:
     def validate_username(self, value):
         return validators.validate_username(value)
 
+    def validate_email(self, value):
+        return validators.validate_email(value)
+
 
 class GetTokenSerializer(serializers.Serializer, ValidationMixin):
     username = serializers.CharField(max_length=100)
     confirmation_code = serializers.CharField(max_length=100)
 
 
-class SignUpSerializer(serializers.ModelSerializer, ValidationMixin):
-    username = serializers.CharField(max_length=NAME_MAX_LENGTH)
-    email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
+class SignUpSerializer(serializers.Serializer, ValidationMixin):
+    username = serializers.CharField()
+    email = serializers.EmailField()
 
-    class Meta:
-        model = User
-    #     fields = '__all__'
-        fields = ('username', 'email')
+    def validate(self, data):
+        email = data.get('email')
+        username = data.get('username')
+        try:
+            get_object_or_404(User,
+                              email=email,
+                              username=username)
+        except Http404:
+            try:
+                User.objects.get(email=email)
+            except User.DoesNotExist:
+                pass
+            else:
+                raise ValidationError(f'Email {email} уже есть')
+            try:
+                User.objects.get(username=username)
+            except User.DoesNotExist:
+                pass
+            else:
+                raise ValidationError(f'Username {username} уже есть')
+        return data
 
 
 class YamdbUserSerializer(serializers.ModelSerializer, ValidationMixin):
