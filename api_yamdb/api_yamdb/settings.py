@@ -118,3 +118,4 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 
 DOMAIN_NAME = 'your-domain.com'
+DEFAULT_FROM_EMAIL = f'admin@{DOMAIN_NAME}'

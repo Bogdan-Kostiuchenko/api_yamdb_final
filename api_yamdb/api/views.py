@@ -1,12 +1,14 @@
 from http.client import BAD_REQUEST, OK
 
 from django.db.models import Avg
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets, status, mixins
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import (
@@ -15,7 +17,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api_yamdb.settings import DOMAIN_NAME
+# from api_yamdb.settings import DOMAIN_NAME
 from api.filters import TitleFilter
 from api.permissions import (
     IsAdminOrReadOnly, IsAdmin, IsAuthorOrAdminOrModerator
@@ -108,7 +110,7 @@ class CommentViewSet(ReviewCommentMixinViewSet):
 
 
 @api_view(('POST',))
-@permission_classes([permissions.AllowAny])
+@permission_classes((permissions.AllowAny,))
 def singup(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -121,24 +123,24 @@ def singup(request):
     confirmation_code = default_token_generator.make_token(user)
     send_mail('Код подтверждения регистрации',
               f'Ваш код подтвержения: {confirmation_code}',
-              f'admin@{DOMAIN_NAME}',
+              settings.DEFAULT_FROM_EMAIL,
               [user.email],
               fail_silently=False)
     return Response(request.data, status=status.HTTP_200_OK)
 
 
 @api_view(('POST',))
-@permission_classes([permissions.AllowAny])
+@permission_classes((permissions.AllowAny,))
 def token_jwt(request):
     serializer = GetTokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = get_object_or_404(User,
-                             username=serializer.validated_data["username"])
+                             username=serializer.validated_data['username'])
     if default_token_generator.check_token(
-        user, serializer.validated_data["confirmation_code"]
+        user, serializer.validated_data['confirmation_code']
     ):
         token = AccessToken.for_user(user)
-        return Response({"token": str(token)}, status=OK)
+        return Response({'token': str(token)}, status=OK)
     return Response(serializer.errors, status=BAD_REQUEST)
 
 
@@ -163,16 +165,20 @@ class UsersViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'], url_path='me',
-            url_name=RESERVE_USERNAME, permission_classes=(IsAuthenticated,))
+    @action(detail=False, url_path='me', url_name=RESERVE_USERNAME,
+            permission_classes=(IsAuthenticated,))
     def get(self, request):
+        # partial=True используется для того,
+        # чтобы избежать проверки на наличие данных в запросе,
+        # так как метод GET не должен требовать никакие данные для валидации.
         serializer = YamdbUserSerializer(request.user,
                                          data=request.data,
                                          partial=True)
-        serializer.is_valid(raise_exception=True)
+        serializer.is_valid()
         return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         if request.method == 'PUT':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            raise MethodNotAllowed(method='PUT',
+                                   detail='Метод запрещен!')
         return super().update(request, *args, **kwargs)

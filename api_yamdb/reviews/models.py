@@ -58,7 +58,8 @@ class YamdbUser(AbstractUser):
 
     @property
     def is_moderator(self):
-        return self.role == UserRoles.MODERATOR.value
+        return (self.role == UserRoles.MODERATOR.value
+                or self.is_superuser)
 
 
 class NameSlug(models.Model):
