@@ -1,3 +1,4 @@
+from urllib import response
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -109,33 +110,24 @@ class SignUpSerializer(serializers.Serializer, ValidationMixin):
     username = serializers.CharField()
     email = serializers.EmailField()
 
-    def validate(self, data):
-        email = data.get('email')
-        username = data.get('username')
-        try:
-            get_object_or_404(User,
-                              email=email,
-                              username=username)
-        except Http404:
-            try:
-                User.objects.get(email=email)
-            except User.DoesNotExist:
-                pass
-            else:
-                raise ValidationError(f'Email {email} уже есть')
-            try:
-                User.objects.get(username=username)
-            except User.DoesNotExist:
-                pass
-            else:
-                raise ValidationError(f'Username {username} уже есть')
-        return data
+    def validate(self, user_data):
+        email = user_data.get('email')
+        username = user_data.get('username')
+
+        if User.objects.filter(email=email).exists():
+            if User.objects.filter(username=username).exists():
+                return user_data
+            raise ValidationError(f'Email {email} уже существует')
+
+        if User.objects.filter(username=username).exists():
+            raise ValidationError(f'Username {username} уже существует')
+        return user_data
 
 
 class YamdbUserSerializer(serializers.ModelSerializer, ValidationMixin):
     """Сериализатор пользователей."""
 
-    class Meta:
+    class Meta():
         model = User
         fields = ('username',
                   'email',
@@ -148,7 +140,5 @@ class YamdbUserSerializer(serializers.ModelSerializer, ValidationMixin):
 class YamdbUserSerializerWithoutRole(YamdbUserSerializer):
     """Сериализатор пользователей."""
 
-    class Meta:
-        model = User
-        ordering = ('username',)
-        exclude = ('role',)
+    class Meta(YamdbUserSerializer.Meta):
+        read_only_fields = ('role',)
