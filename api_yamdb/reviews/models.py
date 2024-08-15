@@ -1,20 +1,12 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils import timezone
-
 
 from reviews.constans import (
     MIN_SCORE, MAX_SCORE, MIN_YEAR_PUB, NAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH, CHAR_FIELD_MAX_LENGTH, SLUG_FIELD_MAX_LENGTH
 )
-
-
-def validate_max_year(value):
-    current_year = timezone.now().year
-    if value > current_year:
-        raise ValidationError(f'Год не может быть больше {current_year}.')
+from reviews.validators import validate_max_year
 
 
 class UserRoles(models.TextChoices):
@@ -109,7 +101,8 @@ class Title(models.Model):
             MIN_YEAR_PUB,
             message=f'Год выпуска не может быть раньше {MIN_YEAR_PUB}'
         ), validate_max_year],
-        verbose_name='год выпуска'
+        verbose_name='год выпуска',
+        db_index=True
     )
     description = models.TextField(blank=True, default='')
     category = models.ForeignKey(

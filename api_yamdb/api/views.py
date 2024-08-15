@@ -52,11 +52,11 @@ class GenreViewSet(CategoryGenreMixinViewSet):
     serializer_class = GenreSerializer
 
 
-class TitleReviewCommentMixinViewSet(viewsets.ModelViewSet):
+class TitleMixinViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
 
-class TitleViewSet(TitleReviewCommentMixinViewSet):
+class TitleViewSet(TitleMixinViewSet):
     queryset = Title.objects.all().annotate(
         rating=Avg('reviews__score')
     ).order_by(*Title._meta.ordering)
@@ -71,10 +71,14 @@ class TitleViewSet(TitleReviewCommentMixinViewSet):
         return TitleSerializer
 
 
-class ReviewViewSet(TitleReviewCommentMixinViewSet):
+class ReviewCommentMixinViewSet(TitleMixinViewSet):
+    permission_classes = (
+        IsAuthenticatedOrReadOnly, IsAuthorOrAdminOrModerator
+    )
+
+
+class ReviewViewSet(ReviewCommentMixinViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,
-                          IsAuthorOrAdminOrModerator)
 
     def get_title(self):
         return get_object_or_404(Title, id=self.kwargs['title_id'])
@@ -86,10 +90,8 @@ class ReviewViewSet(TitleReviewCommentMixinViewSet):
         serializer.save(author=self.request.user, title=self.get_title())
 
 
-class CommentViewSet(TitleReviewCommentMixinViewSet):
+class CommentViewSet(ReviewCommentMixinViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,
-                          IsAuthorOrAdminOrModerator)
 
     def get_review(self):
         return get_object_or_404(

@@ -1,10 +1,11 @@
 import re
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from reviews.constans import (NAME_MAX_LENGTH,
-                              RESERVE_USERNAME,
-                              EMAIL_MAX_LENGTH)
+from reviews.constans import (
+    NAME_MAX_LENGTH, RESERVE_USERNAME, EMAIL_MAX_LENGTH
+)
 
 
 def validate_username(username):
@@ -33,3 +34,9 @@ def validate_email(email):
             f'Длина email больше допустимого - {EMAIL_MAX_LENGTH}!'
         )
     return email
+
+
+def validate_max_year(value):
+    current_year = timezone.now().year
+    if value > current_year:
+        raise ValidationError(f'Год не может быть больше {current_year}.')

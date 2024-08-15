@@ -39,7 +39,6 @@ class TitleSerializer(serializers.ModelSerializer):
 
 class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
-        many=False,
         queryset=Category.objects.all(),
         slug_field='slug'
     )
